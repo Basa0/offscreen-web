@@ -7,7 +7,7 @@ onmessage = function(messageEvent) {
  */
 function handleOffscreenCanvas(offscreenCanvas) {
   const ctx = offscreenCanvas.getContext('2d');
-  this.requestAnimationFrame(() => animationStep('hsl(0, 50%, 50%'));
+  globalThis.requestAnimationFrame(() => animationStep('hsl(0, 50%, 50%'));
 
   function animationStep(hslString) {
     const {width, height} = offscreenCanvas;
@@ -28,7 +28,7 @@ function handleOffscreenCanvas(offscreenCanvas) {
     // ctx.arc(width * 0.25, width * 0.25, width * 0.25, 0, 2 * Math.PI);
     // ctx.fill();
 
-    this.requestAnimationFrame(() => animationStep(nextHslString));
+    globalThis.requestAnimationFrame(() => animationStep(nextHslString));
   }
 }
 
