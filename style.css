@@ -1,0 +1,10 @@
+* {
+  font-family: monospace;
+  color: hsl(0, 0%, 90%);
+  background-color: hsl(0, 0%, 10%);
+}
+
+body {
+  margin: 0;
+  padding: 2em;
+}
