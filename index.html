@@ -11,14 +11,16 @@
 
   <!-- preload -->
   <link rel="prefetch" href="offscreen-canvas.worker.js" as="application/javascript">
+  <link rel="prefetch" href="node_modules/fabric/dist/fabric.js" as="script">
 </head>
 <body>
   <h1>Offscreen Web</h1>
   <p>Playground for web workers and offscreen canvas.</p>
 
-  <canvas id="main-canvas" style="width: 75%;"></canvas>
+  <canvas id="main-canvas" width="1280" height="720" style="width: 75%;"></canvas>
 
   <!-- scripts -->
+  <!-- <script src="node_modules/fabric/dist/fabric.js"></script> -->
   <script async src="main.js"></script>
   <script async src="buttonTest.js"></script>
 </body>

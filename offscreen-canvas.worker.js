@@ -1,63 +1,185 @@
-onmessage = function(messageEvent) {
-  handleOffscreenCanvas(messageEvent.data.offscreenCanvas);
+/** @type {Map<string,{id:string}>} */
+const elementsById = new Map();
+
+const workerDocument = (() => {
+  const document = {
+    createElement,
+    getElementById,
+    documentElement: createElement('documentElement'),
+  };
+  return document;
+
+  function createElement(arg) {
+    console.warn('createElement', arg);
+    switch (arg) {
+      case 'canvas':
+        return new OffscreenCanvas(1, 1);
+      default:
+        return {
+          style: {},
+        };
+    }
+  }
+
+  function getElementById(id) {
+    console.warn('getElementById', id);
+    return elementsById.get(id) || createElement('by id ' + id);
+  }
+})();
+
+function require(arg) {
+  console.warn('require', arg);
+
+  return {
+    JSDOM: function (arg) {
+      console.warn('JSDOM', arg);
+      this.window = {
+        requestAnimationFrame: (func) => {
+          // console.time('offscreen animation frame');
+          return globalThis.requestAnimationFrame(() => {
+            func();
+            // console.timeEnd('offscreen animation frame');
+          });
+        },
+        cancelAnimationFrame: (arg) => cancelAnimationFrame(arg),
+        // setTimeout: func => func(),
+        document: workerDocument,
+      };
+    },
+  };
+}
+
+importScripts('node_modules/fabric/dist/fabric.js');
+
+/** @type {fabric.StaticCanvas} */
+let fCanvas = null;
+
+onmessage = function (messageEvent) {
+  const data = messageEvent && messageEvent.data;
+  if (!data) {
+    return;
+  }
+
+  if (data.offscreenCanvas) {
+    initialize(data.offscreenCanvas);
+  }
+
+  if (fCanvas) {
+    if (data.addAt) {
+      addAt(data.addAt.x, data.addAt.y);
+    }
+    if (data.addRandom) {
+      for (let i = 0; i < 100; i++) addRandom();
+    }
+    if (data.moveRandom) {
+      moveRandom();
+    }
+    if (data.zoomIn) {
+      zoomIn();
+    }
+    if (data.zoomOut) {
+      zoomOut();
+    }
+  }
 };
 
 /**
  * @param {OffscreenCanvas} offscreenCanvas
  */
-function handleOffscreenCanvas(offscreenCanvas) {
+function initialize(offscreenCanvas) {
   const ctx = offscreenCanvas.getContext('2d');
-  globalThis.requestAnimationFrame(() => animationStep('hsl(0, 50%, 50%'));
 
-  function animationStep(hslString) {
-    const {width, height} = offscreenCanvas;
-    ctx.clearRect(0, 0, width, height);
+  elementsById.set('test-canvas-id', offscreenCanvas);
+  fCanvas = new fabric.StaticCanvas('test-canvas-id');
+  console.log('fabricCanvas', fCanvas);
+  const circle = new fabric.Circle({left: 10, top: 10, fill: 'pink', radius: 5});
+  fCanvas.add(circle);
+  fCanvas.requestRenderAll();
 
-    const hslObj = hslFromString(hslString);
-    const nextHslString = hslToString(hslObj.hue + 1, hslObj.saturation, hslObj.lightness);
+  initialized = true;
+  return;
+}
 
-    ctx.fillStyle = nextHslString;
-    ctx.fillRect(width * 0.1, height * 0.1, width * 0.2, height * 0.5);
+function moveRandom() {
+  const objects = fCanvas.getObjects();
+  objects.forEach((obj) => {
+    const {left, top} = randomLeftTop();
+    obj.left = left;
+    obj.top = top;
+  });
+  fCanvas.requestRenderAll();
 
-    ctx.fillStyle = hslToString(hslObj.hue + 120, hslObj.saturation, hslObj.lightness);
-    ctx.fillRect(width * 0.4, height * 0.1, width * 0.2, height * 0.4);
+  // requestAnimationFrame(function wow() {
+  //   fCanvas.renderAll();
+  //   requestAnimationFrame(() => moveRandom());
+  // });
+}
 
-    ctx.fillStyle = hslToString(hslObj.hue + 240, hslObj.saturation, hslObj.lightness);
-    ctx.fillRect(width * 0.7, height * 0.1, width * 0.2, height * 0.3);
+function addRandom() {
+  const {left, top} = randomLeftTop();
+  addAt(left, top);
+}
 
-    // ctx.arc(width * 0.25, width * 0.25, width * 0.25, 0, 2 * Math.PI);
-    // ctx.fill();
+function addAt(left, top) {
+  const circle = new fabric.Circle({
+    left,
+    top,
+    fill: `rgba(${left}, ${top}, ${left + top})`,
+    radius: 5,
+  });
+  fCanvas.add(circle);
+  fCanvas.requestRenderAll();
+}
 
-    globalThis.requestAnimationFrame(() => animationStep(nextHslString));
+function randomLeftTop() {
+  const left = Math.random() * fCanvas.getWidth();
+  const top = Math.random() * fCanvas.getHeight();
+  return {left, top};
+}
+
+/** @type {number} */
+let targetZoom = null;
+
+function zoomIn() {
+  targetZoom = (targetZoom || fCanvas.getZoom()) * 1.1;
+  applyTargetZoom();
+}
+
+function zoomOut() {
+  targetZoom = (targetZoom || fCanvas.getZoom()) * 0.9;
+  applyTargetZoom();
+}
+
+const applyTargetZoomStep = 0.01;
+
+let applyTargetZoom_frameId = 0;
+function applyTargetZoom() {
+  if (applyTargetZoom_frameId) {
+    return;
   }
-}
 
-/**
- * @param {number} hue 0-360 deg
- * @param {number} saturation 0-100 %
- * @param {number} lightness 0-100 %
- * @returns {string}
- */
-function hslToString(hue, saturation, lightness) {
-  return `hsl(${hue % 360}, ${saturation % 100}%, ${lightness % 100}%)`;
-}
+  applyTargetZoom_frameId = requestAnimationFrame(() => {
+    applyTargetZoom_frameId = 0;
 
-/**
- * @param {string} hslAsString
- * @example 'hsl(120, 30%, 45%)' => {hue: 120, saturation: 30, lightness: 45};
- */
-function hslFromString(hslAsString) {
-  const prefixLength = 4;
-  const suffixLength = 1;
-  const clean = hslAsString.substr(
-    prefixLength,
-    hslAsString.length - prefixLength - suffixLength
-  );
+    if (targetZoom === null) {
+      return;
+    }
 
-  const values = clean.split(',');
-  return {
-    hue: parseInt(values[0]),
-    saturation: parseInt(values[1]),
-    lightness: parseInt(values[2]),
-  };
+    const currentZoom = fCanvas.getZoom();
+
+    let zoomToSet;
+    if (Math.abs(currentZoom - targetZoom) < applyTargetZoomStep) {
+      zoomToSet = targetZoom;
+      targetZoom = null;
+    } else if (targetZoom < currentZoom) {
+      zoomToSet = currentZoom - applyTargetZoomStep;
+    } else {
+      zoomToSet = currentZoom + applyTargetZoomStep;
+    }
+
+    fCanvas.setZoom(zoomToSet);
+    fCanvas.renderAll();
+
+    applyTargetZoom();
+  });
 }
