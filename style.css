@@ -8,3 +8,10 @@ body {
   margin: 0;
   padding: 2em;
 }
+
+button {
+  border-radius: 4px;
+  border-color: hsl(0,0%,50%);
+  border-style: solid;
+  border-width: 2px;
+}

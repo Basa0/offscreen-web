@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css">
 
   <!-- preload -->
-  <link rel="prefetch" href="offscreen-canvas.worker.js" as="worker">
+  <link rel="prefetch" href="offscreen-canvas.worker.js" as="application/javascript">
 </head>
 <body>
   <h1>Offscreen Web</h1>
@@ -19,7 +19,7 @@
   <canvas id="main-canvas" style="width: 75%;"></canvas>
 
   <!-- scripts -->
-  <script src="main.js"></script>
-  <script src="buttonTest.js"></script>
+  <script async src="main.js"></script>
+  <script async src="buttonTest.js"></script>
 </body>
 </html>
